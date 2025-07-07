@@ -58,6 +58,8 @@ func (h *URLHandler) GetURLs(c *gin.Context) {
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 	search := c.Query("search")
 	status := c.Query("status")
+	sortField := c.DefaultQuery("sort_field", "created_at")
+	sortDirection := c.DefaultQuery("sort_direction", "desc")
 
 	if page < 1 {
 		page = 1
@@ -86,8 +88,18 @@ func (h *URLHandler) GetURLs(c *gin.Context) {
 	// Get total count
 	query.Count(&total)
 
+	// Validate sort field and direction
+	allowedFields := map[string]bool{"created_at": true, "url": true, "status": true}
+	if !allowedFields[sortField] {
+		sortField = "created_at"
+	}
+	if sortDirection != "asc" && sortDirection != "desc" {
+		sortDirection = "desc"
+	}
+	orderClause := sortField + " " + sortDirection
+
 	// Get paginated results
-	err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&urls).Error
+	err := query.Offset(offset).Limit(pageSize).Order(orderClause).Find(&urls).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch URLs"})
 		return
@@ -121,15 +133,23 @@ func (h *URLHandler) GetURLDetails(c *gin.Context) {
 	}
 
 	var analysis models.AnalysisResult
+	var brokenLinks []models.BrokenLink
+	
 	if err := config.DB.Where("url_id = ?", id).First(&analysis).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"url":      url,
-			"analysis": nil,
-		})
+		// No analysis found, return empty analysis result
+		response := models.AnalysisDetailResponse{
+			AnalysisResult: models.AnalysisResult{
+				URLID: url.ID,
+				URL:   url,
+			},
+			BrokenLinks: brokenLinks,
+		}
+		c.JSON(http.StatusOK, response)
 		return
 	}
 
-	var brokenLinks []models.BrokenLink
+	// Analysis found, populate the URL field and get broken links
+	analysis.URL = url
 	config.DB.Where("analysis_id = ?", analysis.ID).Find(&brokenLinks)
 
 	response := models.AnalysisDetailResponse{
