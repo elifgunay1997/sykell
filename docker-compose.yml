@@ -32,9 +32,7 @@ services:
       - db
     networks:
       - sykell-net
-    command: ["/wait-for-it.sh", "db:3306", "--", "go", "run", "main.go"]
-    volumes:
-      - ./backend:/app
+    command: ["/wait-for-it.sh", "db", "3306", "--", "./server"]
 
   frontend:
     build: ./frontend
