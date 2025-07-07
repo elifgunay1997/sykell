@@ -1,0 +1,59 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: sykell-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: sykell
+      MYSQL_USER: sykelluser
+      MYSQL_PASSWORD: sykellpass
+    ports:
+      - '3306:3306'
+    volumes:
+      - sykell-db-data:/var/lib/mysql
+    networks:
+      - sykell-net
+
+  backend:
+    build: ./backend
+    container_name: sykell-backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: sykelluser
+      DB_PASSWORD: sykellpass
+      DB_NAME: sykell
+      GIN_MODE: release
+    ports:
+      - '8080:8080'
+    depends_on:
+      - db
+    networks:
+      - sykell-net
+    command: ["/wait-for-it.sh", "db:3306", "--", "go", "run", "main.go"]
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    container_name: sykell-frontend
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    depends_on:
+      - backend
+    networks:
+      - sykell-net
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+    volumes:
+      - ./frontend:/app
+
+volumes:
+  sykell-db-data:
+
+networks:
+  sykell-net:
+    driver: bridge 
