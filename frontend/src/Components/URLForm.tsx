@@ -18,9 +18,15 @@ const URLForm: React.FC<URLFormProps> = ({ onURLAdded }) => {
       return;
     }
 
+    // Add protocol if missing
+    let normalizedUrl = url.trim();
+    if (!/^https?:\/\//i.test(normalizedUrl)) {
+      normalizedUrl = 'https://' + normalizedUrl;
+    }
+
     // Basic URL validation
     try {
-      new URL(url);
+      new URL(normalizedUrl);
     } catch {
       setError('Please enter a valid URL (e.g., https://example.com)');
       return;
@@ -30,7 +36,7 @@ const URLForm: React.FC<URLFormProps> = ({ onURLAdded }) => {
     setError('');
 
     try {
-      await apiService.createURL({ url: url.trim() });
+      await apiService.createURL({ url: normalizedUrl });
       setUrl('');
       onURLAdded();
     } catch (err: any) {

@@ -55,8 +55,17 @@ const Details: React.FC = () => {
 
   const { analysis_result, broken_links } = data;
 
-  // Check if analysis was successful
+  // Check if analysis result exists and was successful
   const hasAnalysisData = analysis_result && analysis_result.title !== "";
+  
+  // If no analysis result at all, show no data found
+  if (!analysis_result) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">No data found</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
